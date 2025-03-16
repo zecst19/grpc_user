@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "../../proto"
+	pb "github.com/zecst19/grpc-user/proto"
 )
 
 type UserService struct {
