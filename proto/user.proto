@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+option go_package = "github.com/zecst19/grpc-user/proto";
+
+import "google/protobuf/timestamp.proto";
+
+service UserService {
+    rpc CreateUser(CreateUserRequest) returns (User) {}
+    rpc GetUser(GetUserRequest) returns (User) {}
+    rpc UpdateUser(UpdateUserRequest) returns (User) {}
+    rpc DeleteTask(DeleteUserRequest) returns (DeleteUserResponse) {}
+    rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {} 
+}
+
+message User {
+    string id = 1;
+    string first_name = 2;
+    string last_name = 3;
+    string nickname = 4;
+    string password = 5; //hash this
+    string email = 6;
+    string country = 7;
+    google.protobuf.Timestamp created_at = 8;
+    google.protobuf.Timestamp updated_at = 9;
+}
+
+message CreateUserRequest {
+    string first_name = 1;
+    string last_name = 2;
+    string nickname = 3;
+    string password = 4;
+    string email = 5;
+    string country = 6;
+}
+
+message GetUserRequest {
+    string id = 1;
+}
+
+message UpdateUserRequest {
+    string id = 1;
+    optional string first_name = 2;
+    optional string last_name = 3;
+    optional string nickname = 4;
+    optional string password = 5; //hash this
+    optional string email = 6;
+    optional string country = 7;
+}
+
+message DeleteUserRequest {
+    string id = 1;
+}
+
+message DeleteUserResponse {
+    bool success = 1;
+}
+
+message ListUsersRequest {
+    optional int32 page = 1;
+    optional int32 page_size = 2;
+    optional string country = 3;
+    optional string last_name = 4;
+    optional string from_date = 5;
+    optional string to_date = 6;
+}
+
+message ListUsersResponse { 
+    repeated User users = 1;
+    int32 total_count = 2;
+}
