@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc"
 
 	pb "github.com/zecst19/grpc-user/proto"
-	userService "github.com/zecst19/grpc-user/server/user_service"
+	userService "github.com/zecst19/grpc-user/server/user/user_service"
 )
 
 const (
