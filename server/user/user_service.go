@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	pb "github.com/zecst19/grpc-user/proto"
 )
@@ -32,8 +33,8 @@ func (svc *UserService) CreateUser(ctx context.Context, req *pb.CreateUserReques
 		Password:  req.Password, //TODO HASH
 		Email:     req.Email,
 		Country:   req.Country,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: timestamppb.Now(),
+		UpdatedAt: timestamppb.Now(),
 	}
 
 	res, err := svc.collection.InsertOne(ctx, user)
@@ -87,33 +88,33 @@ func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 
 	updatedFirstName := user.FirstName
 	if req.FirstName != nil {
-		updatedFirstName = req.FirstName
+		updatedFirstName = *req.FirstName
 	}
 
 	updatedLastName := user.LastName
 	if req.LastName != nil {
-		updatedLastName = req.LastName
+		updatedLastName = *req.LastName
 	}
 
 	var updatedNickname string
 	if req.Nickname != nil {
-		updatedNickname = req.Nickname
+		updatedNickname = *req.Nickname
 	}
 
 	//maybe remove this from update
 	var updatedPassword string
 	if req.Password != nil {
-		updatedPassword = req.Password
+		updatedPassword = *req.Password
 	}
 
 	var updatedEmail string
 	if req.Email != nil {
-		updatedEmail = req.Email
+		updatedEmail = *req.Email
 	}
 
 	var updatedCountry string
 	if req.Country != nil {
-		updatedCountry = req.Country
+		updatedCountry = *req.Country
 	}
 
 	update := bson.M{

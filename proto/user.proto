@@ -56,8 +56,8 @@ message DeleteUserResponse {
 }
 
 message ListUsersRequest {
-    optional int32 page = 1;
-    optional int32 page_size = 2;
+    int32 page = 1;
+    int32 page_size = 2;
     optional string country = 3;
     optional string last_name = 4;
     optional string from_date = 5;
