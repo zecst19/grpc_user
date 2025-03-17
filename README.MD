@@ -1,4 +1,4 @@
-# User Service
+# UserService
 
 ## How to Run
 
@@ -6,7 +6,7 @@ Run <code>go run server/main.go</code> and call grpc endpoints
 
 ## Endpoints
 
-### Create User
+### CreateUser
 Creates a new User with the given fields <br>
 
 Example Request:
@@ -20,7 +20,7 @@ Example Request:
         "Country"   : "PT", 
     }
 
-### Get User
+### GetUser
 Fetches an existing Users <br>
 
 Example Request:
@@ -29,7 +29,7 @@ Example Request:
         "Id" : "26ef0140-c436-4838-a271-32652c72f6f2",
     }
 
-### Update User
+### UpdateUser
 Updates an existing User with the given fields, omitted fields stay the same <br>
 
 Example Request:
@@ -44,7 +44,7 @@ Example Request:
         "Country"   : "PT",                             //optional
     }
 
-### Delete User
+### DeleteUser
 Deletes an existing User <br>
 
 Example Request:
@@ -53,7 +53,7 @@ Example Request:
         "Id" : "26ef0140-c436-4838-a271-32652c72f6f2",
     }
     
-### List Users
+### ListUsers
 List all Users that match the given filters, if no filters are present returns all Users <br>
 
 Example Request:
