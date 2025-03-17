@@ -8,7 +8,7 @@ service UserService {
     rpc CreateUser(CreateUserRequest) returns (User) {}
     rpc GetUser(GetUserRequest) returns (User) {}
     rpc UpdateUser(UpdateUserRequest) returns (User) {}
-    rpc DeleteTask(DeleteUserRequest) returns (DeleteUserResponse) {}
+    rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse) {}
     rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {} 
 }
 

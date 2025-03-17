@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	pb "github.com/zecst19/grpc-user/proto"
 )
@@ -17,7 +18,7 @@ const (
 
 func main() {
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Did not connect: %v", err)
 	}
@@ -49,16 +50,27 @@ func main() {
 	}
 	fmt.Printf("Got user: %v\n", getResp)
 
+	newFirstName := "Cristiano"
+	newLastName := "Ronaldo"
+	newCountry := "PT"
 	// Update the user
 	updateResp, err := client.UpdateUser(ctx, &pb.UpdateUserRequest{
-		FirstName: "Cristiano",
-		LastName:  "Ronaldo",
-		Country:   "PT",
+		Id:        getResp.Id,
+		FirstName: &newFirstName,
+		LastName:  &newLastName,
+		Country:   &newCountry,
 	})
 	if err != nil {
 		log.Fatalf("Could not update user: %v", err)
 	}
 	fmt.Printf("Updated user: %v\n", updateResp)
+
+	// Get the udpated user
+	getUpdatedResp, err := client.GetUser(ctx, &pb.GetUserRequest{Id: createResp.Id})
+	if err != nil {
+		log.Fatalf("Could not get user: %v", err)
+	}
+	fmt.Printf("Got updated user: %v\n", getUpdatedResp)
 
 	// List users
 	listResp, err := client.ListUsers(ctx, &pb.ListUsersRequest{

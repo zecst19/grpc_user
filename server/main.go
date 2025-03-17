@@ -17,7 +17,7 @@ import (
 const (
 	port     = ":50051"
 	mongoURI = "mongodb://localhost:27017"
-	dbName   = "taskdb"
+	dbName   = "userDB"
 )
 
 func main() {

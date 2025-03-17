@@ -119,6 +119,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 
 	update := bson.M{
 		"$set": bson.M{
+			"id":         user.Id,
 			"first_name": updatedFirstName,
 			"last_name":  updatedLastName,
 			"nickname":   updatedNickname,
