@@ -50,7 +50,7 @@ func TestUserService_CreateUser(t *testing.T) {
 		expected_response pb.User
 	}{
 		{
-			name: "Get User Success",
+			name: "Create User Success",
 			request: pb.CreateUserRequest{
 				FirstName: "Cristiano",
 				LastName:  "Ronaldo",
@@ -71,11 +71,11 @@ func TestUserService_CreateUser(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			resp, err := svc.CreateUser(context.Background(), &tt.request)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := svc.CreateUser(context.Background(), &tc.request)
 			require.NoError(t, err)
-			require.Equal(t, tt.expected_response, resp)
+			require.Equal(t, tc.expected_response, resp)
 		})
 
 	}

@@ -2,8 +2,6 @@ syntax = "proto3";
 
 option go_package = "./proto";
 
-import "google/protobuf/timestamp.proto";
-
 service UserService {
     rpc CreateUser(CreateUserRequest) returns (User) {}
     rpc GetUser(GetUserRequest) returns (User) {}
@@ -17,11 +15,11 @@ message User {
     string first_name = 2;
     string last_name = 3;
     string nickname = 4;
-    string password = 5; //hash this
+    string password = 5; 
     string email = 6;
     string country = 7;
-    google.protobuf.Timestamp created_at = 8;
-    google.protobuf.Timestamp updated_at = 9;
+    string created_at = 8; 
+    string updated_at = 9;
 }
 
 message CreateUserRequest {
@@ -42,7 +40,7 @@ message UpdateUserRequest {
     optional string first_name = 2;
     optional string last_name = 3;
     optional string nickname = 4;
-    optional string password = 5; //hash this
+    optional string password = 5;
     optional string email = 6;
     optional string country = 7;
 }

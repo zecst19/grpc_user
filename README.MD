@@ -67,15 +67,9 @@ Example Request:
         "ToDate"    : "2025-03-01", //optional
     }
     
-#### Known Issues
-* <em>ListUsers</em> doesn't return IDs
-* <em>UpdateUser</em> doesn't update Fields
-
-
 #### To-Do
-* fix known issues
-* add filters to <em>ListUsers</em>
 * remove password from <em>GetUser</em> and <em>ListUsers</em> responses
+* see if I wanna keep from and to filters in <em>ListUsers</em>
 * finish unit tests
 * add healthcheck
 * add API Gateway + Docker

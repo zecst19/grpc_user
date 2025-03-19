@@ -5,14 +5,13 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/google/uuid"
 	pb "github.com/zecst19/grpc-user/proto"
 )
 
@@ -33,38 +32,28 @@ func (svc *UserService) CreateUser(ctx context.Context, req *pb.CreateUserReques
 	}
 
 	user := &pb.User{
+		Id:        uuid.New().String(),
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Nickname:  req.Nickname,
 		Password:  string(hashedPassword),
 		Email:     req.Email,
 		Country:   req.Country,
-		CreatedAt: timestamppb.Now(),
-		UpdatedAt: timestamppb.Now(),
+		CreatedAt: time.Now().Format(time.RFC3339),
+		UpdatedAt: time.Now().Format(time.RFC3339),
 	}
 
-	res, err := svc.collection.InsertOne(ctx, user)
+	_, err = svc.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to create user: %v", err)
 	}
 
-	oid, ok := res.InsertedID.(primitive.ObjectID)
-	if !ok {
-		return nil, status.Errorf(codes.Internal, "Failed to convert InsertedID to ObjectID")
-	}
-
-	user.Id = oid.Hex()
 	return user, nil
 }
 
 func (s *UserService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
-	oid, err := primitive.ObjectIDFromHex(req.Id)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid ID")
-	}
-
 	var user pb.User
-	err = s.collection.FindOne(ctx, bson.M{"_id": oid}).Decode(&user)
+	err := s.collection.FindOne(ctx, bson.M{"id": req.Id}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, status.Errorf(codes.NotFound, "User not found")
@@ -72,19 +61,13 @@ func (s *UserService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 		return nil, status.Errorf(codes.Internal, "Failed to get user: %v", err)
 	}
 
-	user.Id = oid.Hex()
 	return &user, nil
 }
 
 func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
-	oid, err := primitive.ObjectIDFromHex(req.Id)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid ID")
-	}
-
 	//call the get and fill these variables with it
 	var user pb.User
-	err = s.collection.FindOne(ctx, bson.M{"_id": oid}).Decode(&user)
+	err := s.collection.FindOne(ctx, bson.M{"id": req.Id}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, status.Errorf(codes.NotFound, "User not found")
@@ -92,10 +75,10 @@ func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, status.Errorf(codes.Internal, "Failed to get user: %v", err)
 	}
 
-	//updatedFirstName := user.FirstName
-	//if req.FirstName != nil {
-	//	updatedFirstName = *req.FirstName
-	//}
+	updatedFirstName := user.FirstName
+	if req.FirstName != nil {
+		updatedFirstName = *req.FirstName
+	}
 
 	updatedLastName := user.LastName
 	if req.LastName != nil {
@@ -118,22 +101,23 @@ func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	}
 
 	update := bson.M{
-		"$set": bson.M{
-			"first_name": req.FirstName,
-			"last_name":  updatedLastName,
-			"nickname":   updatedNickname,
-			"password":   user.Password,
-			"email":      updatedEmail,
-			"country":    updatedCountry,
-			"created_at": user.CreatedAt,
-			"updated_at": time.Now(),
+		"$set": &pb.User{
+			Id:        user.Id,
+			FirstName: updatedFirstName,
+			LastName:  updatedLastName,
+			Nickname:  updatedNickname,
+			Password:  user.Password,
+			Email:     updatedEmail,
+			Country:   updatedCountry,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: time.Now().Format(time.RFC3339),
 		},
 	}
 
 	var updatedUser pb.User
 	err = s.collection.FindOneAndUpdate(
 		ctx,
-		bson.M{"_id": oid},
+		bson.M{"id": req.Id},
 		update,
 		options.FindOneAndUpdate().SetReturnDocument(options.After),
 	).Decode(&updatedUser)
@@ -145,17 +129,11 @@ func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, status.Errorf(codes.Internal, "Failed to update user: %v", err)
 	}
 
-	updatedUser.Id = oid.Hex()
 	return &updatedUser, nil
 }
 
 func (s *UserService) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
-	oid, err := primitive.ObjectIDFromHex(req.Id)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid ID")
-	}
-
-	res, err := s.collection.DeleteOne(ctx, bson.M{"_id": oid})
+	res, err := s.collection.DeleteOne(ctx, bson.M{"id": req.Id})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to delete user: %v", err)
 	}
@@ -174,7 +152,24 @@ func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (
 		SetSkip(int64((req.Page - 1) * req.PageSize)).
 		SetLimit(int64(req.PageSize))
 
-	cursor, err := s.collection.Find(ctx, bson.M{}, opts)
+	filter := bson.M{}
+	if req.Country != nil {
+		filter["country"] = req.Country
+	}
+
+	if req.LastName != nil {
+		filter["last_name"] = req.LastName
+	}
+
+	//if req.FromDate != nil {
+	//	filter["created_at"] = "$gte: " + *req.FromDate
+	//}
+
+	//if req.ToDate != nil {
+	//	filter["created_at"] = "$lte: " + *req.ToDate
+	//}
+
+	cursor, err := s.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to list users: %v", err)
 	}
@@ -185,7 +180,6 @@ func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (
 		if err := cursor.Decode(&user); err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to decode user: %v", err)
 		}
-		user.Id = user.Id // Convert ObjectID to string TODO FIX THIS
 		users = append(users, &user)
 	}
 
