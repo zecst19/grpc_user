@@ -1,4 +1,4 @@
-package user_service
+package grpc_user
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -26,11 +27,16 @@ func NewUserService(collection *mongo.Collection) *UserService {
 
 func (svc *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
 	//TODO add checks
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), 14)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to hash password: %v", err)
+	}
+
 	user := &pb.User{
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Nickname:  req.Nickname,
-		Password:  req.Password, //TODO HASH
+		Password:  string(hashedPassword),
 		Email:     req.Email,
 		Country:   req.Country,
 		CreatedAt: timestamppb.Now(),
@@ -47,7 +53,7 @@ func (svc *UserService) CreateUser(ctx context.Context, req *pb.CreateUserReques
 		return nil, status.Errorf(codes.Internal, "Failed to convert InsertedID to ObjectID")
 	}
 
-	user.Id = oid.Hex() //TODO chcek if this is hashed
+	user.Id = oid.Hex()
 	return user, nil
 }
 
@@ -86,44 +92,37 @@ func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, status.Errorf(codes.Internal, "Failed to get user: %v", err)
 	}
 
-	updatedFirstName := user.FirstName
-	if req.FirstName != nil {
-		updatedFirstName = *req.FirstName
-	}
+	//updatedFirstName := user.FirstName
+	//if req.FirstName != nil {
+	//	updatedFirstName = *req.FirstName
+	//}
 
 	updatedLastName := user.LastName
 	if req.LastName != nil {
 		updatedLastName = *req.LastName
 	}
 
-	var updatedNickname string
+	updatedNickname := user.Nickname
 	if req.Nickname != nil {
 		updatedNickname = *req.Nickname
 	}
 
-	//maybe remove this from update
-	var updatedPassword string
-	if req.Password != nil {
-		updatedPassword = *req.Password
-	}
-
-	var updatedEmail string
+	updatedEmail := user.Email
 	if req.Email != nil {
 		updatedEmail = *req.Email
 	}
 
-	var updatedCountry string
+	updatedCountry := user.Country
 	if req.Country != nil {
 		updatedCountry = *req.Country
 	}
 
 	update := bson.M{
 		"$set": bson.M{
-			"id":         user.Id,
-			"first_name": updatedFirstName,
+			"first_name": req.FirstName,
 			"last_name":  updatedLastName,
 			"nickname":   updatedNickname,
-			"password":   updatedPassword,
+			"password":   user.Password,
 			"email":      updatedEmail,
 			"country":    updatedCountry,
 			"created_at": user.CreatedAt,
@@ -186,7 +185,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (
 		if err := cursor.Decode(&user); err != nil {
 			return nil, status.Errorf(codes.Internal, "Failed to decode user: %v", err)
 		}
-		user.Id = user.Id // Convert ObjectID to string
+		user.Id = user.Id // Convert ObjectID to string TODO FIX THIS
 		users = append(users, &user)
 	}
 

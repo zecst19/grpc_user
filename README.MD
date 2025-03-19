@@ -6,7 +6,7 @@ Run <code>go run server/main.go</code> and call grpc endpoints
 
 ## Endpoints
 
-### CreateUser
+### <em>CreateUser</em>
 Creates a new User with the given fields <br>
 
 Example Request:
@@ -20,7 +20,7 @@ Example Request:
         "Country"   : "PT", 
     }
 
-### GetUser
+### <em>GetUser</em>
 Fetches an existing Users <br>
 
 Example Request:
@@ -29,7 +29,7 @@ Example Request:
         "Id" : "26ef0140-c436-4838-a271-32652c72f6f2",
     }
 
-### UpdateUser
+### <em>UpdateUser</em>
 Updates an existing User with the given fields, omitted fields stay the same <br>
 
 Example Request:
@@ -44,7 +44,7 @@ Example Request:
         "Country"   : "PT",                             //optional
     }
 
-### DeleteUser
+### <em>DeleteUser</em>
 Deletes an existing User <br>
 
 Example Request:
@@ -53,7 +53,7 @@ Example Request:
         "Id" : "26ef0140-c436-4838-a271-32652c72f6f2",
     }
     
-### ListUsers
+### <em>ListUsers</em>
 List all Users that match the given filters, if no filters are present returns all Users <br>
 
 Example Request:
@@ -67,3 +67,18 @@ Example Request:
         "ToDate"    : "2025-03-01", //optional
     }
     
+#### Known Issues
+* <em>ListUsers</em> doesn't return IDs
+* <em>UpdateUser</em> doesn't update Fields
+
+
+#### To-Do
+* fix known issues
+* add filters to <em>ListUsers</em>
+* remove password from <em>GetUser</em> and <em>ListUsers</em> responses
+* finish unit tests
+* add healthcheck
+* add API Gateway + Docker
+* prep Kafka messages
+* add logs
+* add comments where needed
