@@ -147,7 +147,7 @@ func (s *UserService) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest)
 
 func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
 	var users []*pb.User
-	//missing the filters
+
 	opts := options.Find().
 		SetSkip(int64((req.Page - 1) * req.PageSize)).
 		SetLimit(int64(req.PageSize))

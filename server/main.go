@@ -70,7 +70,7 @@ func main() {
 				next = healthpb.HealthCheckResponse_SERVING
 			}
 
-			log.Print("Health:", next.Descriptor().Name())
+			log.Print("Health: ", next.Descriptor().Name())
 			time.Sleep(time.Second * 5)
 		}
 	}()
