@@ -9,6 +9,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	pb "github.com/zecst19/grpc-user/proto"
 	userService "github.com/zecst19/grpc-user/server/user"
@@ -48,10 +51,32 @@ func main() {
 	user_service := userService.NewUserService(user_collection)
 
 	// Create a new gRPC server
-	s := grpc.NewServer()
+	server := grpc.NewServer()
+
+	// Server Health Check
+	healthcheck := health.NewServer()
+	healthgrpc.RegisterHealthServer(server, healthcheck)
+
+	go func() {
+		// asynchronously inspect dependencies and toggle serving status as needed
+		next := healthpb.HealthCheckResponse_SERVING
+
+		for {
+			healthcheck.SetServingStatus("", next)
+
+			if next == healthpb.HealthCheckResponse_SERVING {
+				next = healthpb.HealthCheckResponse_NOT_SERVING
+			} else {
+				next = healthpb.HealthCheckResponse_SERVING
+			}
+
+			log.Print("Health:", next.Descriptor().Name())
+			time.Sleep(time.Second * 5)
+		}
+	}()
 
 	// Register our service with the gRPC server
-	pb.RegisterUserServiceServer(s, user_service)
+	pb.RegisterUserServiceServer(server, user_service)
 
 	// Start listening on the specified port
 	lis, err := net.Listen("tcp", port)
@@ -62,7 +87,7 @@ func main() {
 	log.Printf("Server listening on %s", port)
 
 	// Start serving
-	if err := s.Serve(lis); err != nil {
+	if err := server.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 }
