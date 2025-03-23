@@ -58,8 +58,6 @@ message ListUsersRequest {
     int32 page_size = 2;
     optional string country = 3;
     optional string last_name = 4;
-    optional string from_date = 5;
-    optional string to_date = 6;
 }
 
 message ListUsersResponse { 

@@ -63,13 +63,13 @@ List all Users that match the given filters, if no filters are present returns a
         "PageSize"  : 10,
         "Country"   : "PT",         //optional
         "LastName"  : "Ronaldo",    //optional
-        "FromDate"  : "2025-02-01", //optional
-        "ToDate"    : "2025-03-01", //optional
     }
     
 #### To-Do
 * remove password from <em>GetUser</em> and <em>ListUsers</em> responses
 * add creation date filters in <em>ListUsers</em>
+* add checks in <em>CreateUser</em> and <em>UpdateUser</em>
 * add API Gateway + Containerization
-* add logs
-* add comments where needed
+
+#### Notes:
+* Used sarama for it's ease of use and because it's written in Go (plus the support it has compared to other kafka go libraries)

@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 
 	pb "github.com/zecst19/grpc-user/proto"
 	userService "github.com/zecst19/grpc-user/server/user"
@@ -65,21 +64,23 @@ func main() {
 	// Create a new gRPC server
 	server := grpc.NewServer()
 
+	log.Printf("GRPC Server created")
+
 	// Server Health Check
 	healthcheck := health.NewServer()
 	healthgrpc.RegisterHealthServer(server, healthcheck)
 
 	go func() {
 		// asynchronously inspect dependencies and toggle serving status as needed
-		next := healthpb.HealthCheckResponse_SERVING
+		next := healthgrpc.HealthCheckResponse_SERVING
 
 		for {
 			healthcheck.SetServingStatus("", next)
 
-			if next == healthpb.HealthCheckResponse_SERVING {
-				next = healthpb.HealthCheckResponse_NOT_SERVING
+			if next == healthgrpc.HealthCheckResponse_SERVING {
+				next = healthgrpc.HealthCheckResponse_NOT_SERVING
 			} else {
-				next = healthpb.HealthCheckResponse_SERVING
+				next = healthgrpc.HealthCheckResponse_SERVING
 			}
 
 			log.Print("Health: ", next.Descriptor().Name())

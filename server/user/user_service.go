@@ -38,7 +38,6 @@ func NewUserService(collection *mongo.Collection, kafkaProducer sarama.SyncProdu
 }
 
 func (svc *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
-	//TODO add checks
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), 14)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to hash password: %v", err)
@@ -61,11 +60,13 @@ func (svc *UserService) CreateUser(ctx context.Context, req *pb.CreateUserReques
 		return nil, status.Errorf(codes.Internal, "Failed to create user: %v", err)
 	}
 
-	// Define the message to be sent
+	// Build kafka message
 	message := Message{
 		Event: "user.created",
 		Value: user,
 	}
+
+	log.Printf("User Created:  %v", user.Id)
 
 	serializedMessage, err := json.Marshal(message)
 	if err != nil {
@@ -90,7 +91,9 @@ func (svc *UserService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*p
 		return nil, status.Errorf(codes.Internal, "Failed to get user: %v", err)
 	}
 
-	// Define the message to be sent
+	log.Printf("User Fetched:  %v", user.Id)
+
+	// Build kafka message
 	message := Message{
 		Event: "user.get",
 		Value: &user,
@@ -174,7 +177,9 @@ func (svc *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserReques
 		return nil, status.Errorf(codes.Internal, "Failed to update user: %v", err)
 	}
 
-	// Define the message to be sent
+	log.Printf("User Updated:  %v", user.Id)
+
+	// Build kafka message
 	message := Message{
 		Event: "user.update",
 		Value: &updatedUser,
@@ -203,7 +208,9 @@ func (svc *UserService) DeleteUser(ctx context.Context, req *pb.DeleteUserReques
 		return nil, status.Errorf(codes.NotFound, "User not found")
 	}
 
-	// Define the message to be sent
+	log.Printf("User Deleted:  %v", req.Id)
+
+	// Build kafka message
 	message := Message{
 		Event: "user.delete",
 		Value: req.Id,
@@ -238,14 +245,6 @@ func (svc *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest)
 		filter["last_name"] = req.LastName
 	}
 
-	//if req.FromDate != nil {
-	//	filter["created_at"] = "$gte: " + *req.FromDate
-	//}
-
-	//if req.ToDate != nil {
-	//	filter["created_at"] = "$lte: " + *req.ToDate
-	//}
-
 	cursor, err := svc.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to list users: %v", err)
@@ -269,7 +268,9 @@ func (svc *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest)
 		return nil, status.Errorf(codes.Internal, "Failed to count users: %v", err)
 	}
 
-	// Define the message to be sent
+	log.Printf("Users Listed:  %v", len(users))
+
+	// Build kafka message
 	message := Message{
 		Event: "user.list",
 		Value: users,
@@ -300,7 +301,7 @@ func (svc *UserService) produceMessage(message []byte) error {
 	if err != nil {
 		return status.Errorf(codes.Internal, "Failed to produce message: %v", err)
 	}
-	log.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+	log.Printf("Message sent to topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
 
 	return nil
 }
