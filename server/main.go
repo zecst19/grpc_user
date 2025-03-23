@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/IBM/sarama"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
@@ -17,10 +18,11 @@ import (
 	userService "github.com/zecst19/grpc-user/server/user"
 )
 
-const (
-	port     = ":50051"
-	mongoURI = "mongodb://localhost:27017"
-	dbName   = "userDB"
+var (
+	port        = ":50051"
+	mongoURI    = "mongodb://localhost:27017"
+	dbName      = "userDB"
+	kafkaBroker = []string{"localhost:9092"}
 )
 
 func main() {
@@ -46,9 +48,19 @@ func main() {
 
 	log.Println("Connected to MongoDB")
 
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Producer.Retry.Max = 5
+	// NewSyncProducer creates a new SyncProducer using the given broker addresses and configuration.
+	producer, err := sarama.NewSyncProducer(kafkaBroker, config)
+	if err != nil {
+		log.Fatalf("Failed to create Producer: %v", err)
+	}
+
 	// Create a new UserService instance
 	user_collection := client.Database(dbName).Collection("users")
-	user_service := userService.NewUserService(user_collection)
+	user_service := userService.NewUserService(user_collection, producer)
 
 	// Create a new gRPC server
 	server := grpc.NewServer()

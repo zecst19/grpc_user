@@ -5,6 +5,8 @@ import (
 	"log"
 	"testing"
 
+	"github.com/IBM/sarama"
+	sarama_mock "github.com/IBM/sarama/mocks"
 	"github.com/stretchr/testify/require"
 	pb "github.com/zecst19/grpc-user/proto"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -37,7 +39,8 @@ func TestUserService(t *testing.T) {
 
 	// Create a new UserService instance
 	user_collection := client.Database(dbName).Collection("users_test")
-	svc := NewUserService(user_collection)
+	mock_producer := sarama_mock.NewSyncProducer(t, sarama.NewConfig())
+	svc := NewUserService(user_collection, mock_producer)
 
 	user_collection.InsertOne(ctx, &pb.User{
 		Id:        "86f9f466-851a-4b93-af21-d5f52ac91006",
@@ -70,6 +73,8 @@ func TestUserService(t *testing.T) {
 			Country:   "EG",
 		}
 
+		mock_producer.ExpectSendMessageAndSucceed()
+
 		resp, err := svc.CreateUser(context.Background(), in)
 		require.NoError(t, err)
 		require.Equal(t, expected_response.FirstName, resp.FirstName)
@@ -95,6 +100,8 @@ func TestUserService(t *testing.T) {
 			CreatedAt: "2025-03-22T18:37:00Z",
 			UpdatedAt: "2025-03-22T18:37:00Z",
 		}
+
+		mock_producer.ExpectSendMessageAndSucceed()
 
 		resp, err := svc.GetUser(context.Background(), in)
 		require.NoError(t, err)
@@ -126,6 +133,8 @@ func TestUserService(t *testing.T) {
 			CreatedAt: "2025-03-22T18:37:00Z",
 			UpdatedAt: "2025-03-22T18:37:00Z",
 		}
+
+		mock_producer.ExpectSendMessageAndSucceed()
 
 		resp, err := svc.UpdateUser(context.Background(), in)
 		require.NoError(t, err)
@@ -173,6 +182,8 @@ func TestUserService(t *testing.T) {
 			TotalCount: 2,
 		}
 
+		mock_producer.ExpectSendMessageAndSucceed()
+
 		resp, err := svc.ListUsers(context.Background(), in)
 		require.NoError(t, err)
 		require.Equal(t, len(expected_response.Users), len(resp.Users))
@@ -218,6 +229,8 @@ func TestUserService(t *testing.T) {
 			TotalCount: 2,
 		}
 
+		mock_producer.ExpectSendMessageAndSucceed()
+
 		resp, err := svc.ListUsers(context.Background(), in)
 		require.NoError(t, err)
 		require.Equal(t, len(expected_response.Users), len(resp.Users))
@@ -239,6 +252,8 @@ func TestUserService(t *testing.T) {
 		expected_response := &pb.DeleteUserResponse{
 			Success: true,
 		}
+
+		mock_producer.ExpectSendMessageAndSucceed()
 
 		resp, err := svc.DeleteUser(context.Background(), in)
 		require.NoError(t, err)

@@ -2,6 +2,8 @@ package grpc_user
 
 import (
 	"context"
+	"encoding/json"
+	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,17 +13,28 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/IBM/sarama"
 	"github.com/google/uuid"
 	pb "github.com/zecst19/grpc-user/proto"
 )
 
-type UserService struct {
-	pb.UnimplementedUserServiceServer
-	collection *mongo.Collection
+var (
+	topic = "user-topic"
+)
+
+type Message struct {
+	Event string `json:"event"`
+	Value any    `json:"value"`
 }
 
-func NewUserService(collection *mongo.Collection) *UserService {
-	return &UserService{collection: collection}
+type UserService struct {
+	pb.UnimplementedUserServiceServer
+	collection    *mongo.Collection
+	kafkaProducer sarama.SyncProducer
+}
+
+func NewUserService(collection *mongo.Collection, kafkaProducer sarama.SyncProducer) *UserService {
+	return &UserService{collection: collection, kafkaProducer: kafkaProducer}
 }
 
 func (svc *UserService) CreateUser(ctx context.Context, req *pb.CreateUserRequest) (*pb.User, error) {
@@ -48,12 +61,28 @@ func (svc *UserService) CreateUser(ctx context.Context, req *pb.CreateUserReques
 		return nil, status.Errorf(codes.Internal, "Failed to create user: %v", err)
 	}
 
+	// Define the message to be sent
+	message := Message{
+		Event: "user.created",
+		Value: user,
+	}
+
+	serializedMessage, err := json.Marshal(message)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to serialize Producer message: %v", err)
+	}
+
+	err = svc.produceMessage(serializedMessage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to send Producer message: %v", err)
+	}
+
 	return user, nil
 }
 
-func (s *UserService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
+func (svc *UserService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
 	var user pb.User
-	err := s.collection.FindOne(ctx, bson.M{"id": req.Id}).Decode(&user)
+	err := svc.collection.FindOne(ctx, bson.M{"id": req.Id}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, status.Errorf(codes.NotFound, "User not found")
@@ -61,13 +90,29 @@ func (s *UserService) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.
 		return nil, status.Errorf(codes.Internal, "Failed to get user: %v", err)
 	}
 
+	// Define the message to be sent
+	message := Message{
+		Event: "user.get",
+		Value: &user,
+	}
+
+	serializedMessage, err := json.Marshal(message)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to serialize Producer message: %v", err)
+	}
+
+	err = svc.produceMessage(serializedMessage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to send Producer message: %v", err)
+	}
+
 	return &user, nil
 }
 
-func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
+func (svc *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest) (*pb.User, error) {
 	//call the get and fill these variables with it
 	var user pb.User
-	err := s.collection.FindOne(ctx, bson.M{"id": req.Id}).Decode(&user)
+	err := svc.collection.FindOne(ctx, bson.M{"id": req.Id}).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, status.Errorf(codes.NotFound, "User not found")
@@ -115,7 +160,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 	}
 
 	var updatedUser pb.User
-	err = s.collection.FindOneAndUpdate(
+	err = svc.collection.FindOneAndUpdate(
 		ctx,
 		bson.M{"id": req.Id},
 		update,
@@ -129,11 +174,27 @@ func (s *UserService) UpdateUser(ctx context.Context, req *pb.UpdateUserRequest)
 		return nil, status.Errorf(codes.Internal, "Failed to update user: %v", err)
 	}
 
+	// Define the message to be sent
+	message := Message{
+		Event: "user.update",
+		Value: &updatedUser,
+	}
+
+	serializedMessage, err := json.Marshal(message)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to serialize Producer message: %v", err)
+	}
+
+	err = svc.produceMessage(serializedMessage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to send Producer message: %v", err)
+	}
+
 	return &updatedUser, nil
 }
 
-func (s *UserService) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
-	res, err := s.collection.DeleteOne(ctx, bson.M{"id": req.Id})
+func (svc *UserService) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest) (*pb.DeleteUserResponse, error) {
+	res, err := svc.collection.DeleteOne(ctx, bson.M{"id": req.Id})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to delete user: %v", err)
 	}
@@ -142,10 +203,26 @@ func (s *UserService) DeleteUser(ctx context.Context, req *pb.DeleteUserRequest)
 		return nil, status.Errorf(codes.NotFound, "User not found")
 	}
 
+	// Define the message to be sent
+	message := Message{
+		Event: "user.delete",
+		Value: req.Id,
+	}
+
+	serializedMessage, err := json.Marshal(message)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to serialize Producer message: %v", err)
+	}
+
+	err = svc.produceMessage(serializedMessage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to send Producer message: %v", err)
+	}
+
 	return &pb.DeleteUserResponse{Success: true}, nil
 }
 
-func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
+func (svc *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (*pb.ListUsersResponse, error) {
 	var users []*pb.User
 
 	opts := options.Find().
@@ -169,7 +246,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (
 	//	filter["created_at"] = "$lte: " + *req.ToDate
 	//}
 
-	cursor, err := s.collection.Find(ctx, filter, opts)
+	cursor, err := svc.collection.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to list users: %v", err)
 	}
@@ -187,13 +264,43 @@ func (s *UserService) ListUsers(ctx context.Context, req *pb.ListUsersRequest) (
 		return nil, status.Errorf(codes.Internal, "Cursor error: %v", err)
 	}
 
-	totalCount, err := s.collection.CountDocuments(ctx, bson.M{})
+	totalCount, err := svc.collection.CountDocuments(ctx, bson.M{})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Failed to count users: %v", err)
+	}
+
+	// Define the message to be sent
+	message := Message{
+		Event: "user.list",
+		Value: users,
+	}
+
+	serializedMessage, err := json.Marshal(message)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to serialize Producer message: %v", err)
+	}
+
+	err = svc.produceMessage(serializedMessage)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Failed to send Producer message: %v", err)
 	}
 
 	return &pb.ListUsersResponse{
 		Users:      users,
 		TotalCount: int32(totalCount),
 	}, nil
+}
+
+func (svc *UserService) produceMessage(message []byte) error {
+	msg := &sarama.ProducerMessage{
+		Topic: topic,
+		Value: sarama.StringEncoder(message),
+	}
+	partition, offset, err := svc.kafkaProducer.SendMessage(msg)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Failed to produce message: %v", err)
+	}
+	log.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+
+	return nil
 }
