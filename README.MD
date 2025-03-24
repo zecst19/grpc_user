@@ -72,4 +72,8 @@ List all Users that match the given filters, if no filters are present returns a
 * add API Gateway + Containerization
 
 #### Notes:
+* Used MongoDB because it's the DB EFG uses plus it was good to use it again after a while to refresh my memory 
 * Used sarama for it's ease of use and because it's written in Go (plus the support it has compared to other kafka go libraries)
+* The next steps would be to containerize with Docker to have cleaner deployment process, with a mongo service and a kafka service running in parallel
+* After that an HTTP client was on the TO-DO list
+* After all this I'd focus on the details like strengthening the API with checks on Create and Update, maybe an endpoint to update the password (not including it in the Update was on purpose), further test cases, etc
